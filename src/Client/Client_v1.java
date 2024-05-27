@@ -1,69 +1,55 @@
 package Client;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
 public class Client_v1 {
+	private static final String SERVER_IP = "127.0.0.1"; // 서버 IP 주소
+    private static final int SERVER_PORT = 5000; // 서버 포트 번호
+
+    public static void main(String[] args) {
+        try {
+            // 서버에 연결
+            Socket socket = new Socket(SERVER_IP, SERVER_PORT);
+            BufferedReader keyboardReader = new BufferedReader(new InputStreamReader(System.in));
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+            // 연결 확인 메시지 출력
+            System.out.println("Connected to the chat server.");
+
+            // 사용자 이름 입력
+            System.out.print("Enter your name: ");
+            String name = keyboardReader.readLine();
+            out.println("NAME:" + name);
+
+            // 서버로부터 메시지 수신 및 출력
+            Thread readThread = new Thread(() -> {
+                try {
+                    String message;
+                    while ((message = in.readLine()) != null) {
+                        System.out.println(message);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            readThread.start();
+
+            // 사용자 입력 메시지 서버로 전송
+            String userInput;
+            while ((userInput = keyboardReader.readLine()) != null) {
+                out.println("MSG:" + userInput);
+            }
+
+            // 연결 종료
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
 	
-	private ClientFrame clientFrame;
-	
-	public Client_v1() {
-		clientFrame = new ClientFrame(this);
-	}
-	
-	public static void main(String[] args) {
-
-		System.out.println("### 클라이언트 실행 ###");
-
-		try {
-			Socket socket = new Socket("192.168.0.29", 5000);
-			System.out.println("*** connected to the Server  ***");
-
-			PrintWriter socketWriter = new PrintWriter(socket.getOutputStream(), true);
-			BufferedReader socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			BufferedReader keyboardReader = new BufferedReader(new InputStreamReader(System.in));
-
-			// 서버로 부터 데이터를 읽는 스레드
-			Thread readThread = new Thread(() -> {
-				// while <----
-				try {
-					String serverMeString;
-					while ((serverMeString = socketReader.readLine()) != null) {
-						System.out.println("서버에서 온 MSG. " + serverMeString);
-					}
-				} catch (Exception e) {
-					// TODO: handle exception
-				}
-			});
-
-			// 서버에게 데이터를 보내는 스레드
-			Thread writeThread = new Thread(() -> {
-				try {
-					String clienMessage;
-					while ((clienMessage = keyboardReader.readLine()) != null) {
-						// 1. 키보드에서 데이터를 응용프로그래 ㅁ안으로 입력 받아서
-						// 2. 서버측 소켓과 연결 되어 있는 출력 스트림 통해 데이터를 보낸다.
-						socketWriter.println(clienMessage);
-					}
-				} catch (Exception e2) {
-					e2.printStackTrace();
-				}
-			});
-
-			readThread.start();
-			writeThread.start();
-
-			readThread.join();
-			writeThread.join();
-
-			System.out.println(" 클라이언트 측 프로그램 종료 ");
-
-		} catch (Exception e) {
-
-		}
-		new Client_v1();
-	} // end of main
-
-} // end of class
